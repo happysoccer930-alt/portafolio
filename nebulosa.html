@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nebulosa — recreación procedural</title>
+<style>
+  html,body{height:100%;}
+  body{margin:0;background:#000;overflow:hidden;}
+  #stage{position:fixed;inset:0;display:block;width:100%;height:100%;}
+  /* grano fino de película */
+  #grain{
+    position:fixed;inset:0;pointer-events:none;z-index:2;
+    opacity:.10;mix-blend-mode:overlay;
+    background-image:var(--grain);background-repeat:repeat;
+  }
+  /* viñeta suave */
+  #vignette{
+    position:fixed;inset:0;pointer-events:none;z-index:3;
+    background:radial-gradient(ellipse at 50% 48%, rgba(0,0,0,0) 42%, rgba(0,0,0,.35) 78%, rgba(0,0,0,.72) 100%);
+  }
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+<div id="grain"></div>
+<div id="vignette"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const cv = document.getElementById("stage");
+  const ctx = cv.getContext("2d", { alpha: false });
+
+  /* ============================================================
+     RUIDO (value noise + fbm) con semilla fija
+     ============================================================ */
+  const SEED = 20261024;
+  const perm = new Uint8Array(512);
+  (function initPerm() {
+    const p = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) p[i] = i;
+    let s = SEED >>> 0;
+    const rnd = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
+    for (let i = 255; i > 0; i--) {
+      const j = (rnd() * (i + 1)) | 0;
+      const t = p[i]; p[i] = p[j]; p[j] = t;
+    }
+    for (let i = 0; i < 512; i++) perm[i] = p[i & 255];
+  })();
+
+  const fade = t => t * t * t * (t * (t * 6 - 15) + 10);
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const smoothstep = (e0, e1, x) => {
+    const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0)));
+    return t * t * (3 - 2 * t);
+  };
+  const clamp01 = x => x < 0 ? 0 : x > 1 ? 1 : x;
+
+  function vnoise(x, y) {
+    const xi = Math.floor(x), yi = Math.floor(y);
+    const xf = x - xi, yf = y - yi;
+    const X = xi & 255, Y = yi & 255;
+    const a = perm[perm[X] + Y];
+    const b = perm[perm[X + 1] + Y];
+    const c = perm[perm[X] + Y + 1];
+    const d = perm[perm[X + 1] + Y + 1];
+    const u = fade(xf), v = fade(yf);
+    return lerp(lerp(a, b, u), lerp(c, d, u), v) / 255;
+  }
+
+  function fbm(x, y, octaves) {
+    let sum = 0, amp = 0.5, norm = 0;
+    let px = x, py = y;
+    for (let o = 0; o < octaves; o++) {
+      sum += amp * vnoise(px, py);
+      norm += amp;
+      amp *= 0.52;
+      const nx = px * 2.02 - py * 1.04 + 13.7;
+      const ny = px * 1.04 + py * 2.02 - 7.3;
+      px = nx; py = ny;
+    }
+    return sum / norm;
+  }
+
+  /* generador pseudoaleatorio rápido y reproducible */
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  /* ============================================================
+     CAMPO DE LA NEBULOSA (se calcula una sola vez)
+     ============================================================ */
+  const SIZE = 720;
+  const CX = 0.505, CY = 0.465;   // centro del núcleo (normalizado)
+  let nebulaCanvas = null;
+
+  function buildNebula() {
+    const c = document.createElement("canvas");
+    c.width = c.height = SIZE;
+    const g = c.getContext("2d");
+    const img = g.createImageData(SIZE, SIZE);
+    const data = img.data;
+
+    let i = 0;
+    for (let py = 0; py < SIZE; py++) {
+      const v = py / SIZE;
+      for (let px = 0; px < SIZE; px++) {
+        const u = px / SIZE;
+
+        // coordenadas radiales con ligera elipse
+        const dx = (u - CX) * 2.0;
+        const dy = (v - CY) * 1.98;
+        const r = Math.sqrt(dx * dx + dy * dy);
+        const ang = Math.atan2(dy, dx);
+
+        // borde irregular de la nebulosa
+        const wob = 1
+          + 0.085 * Math.sin(ang * 3 + 1.1)
+          + 0.055 * Math.sin(ang * 5 - 0.4)
+          + 0.035 * Math.sin(ang * 8 + 2.2);
+        const rr = r / (0.84 * wob);
+
+        // domain warping → filamentos
+        const nx = u * 3.1, ny = v * 3.1;
+        const q1 = fbm(nx, ny, 3);
+        const q2 = fbm(nx + 7.7, ny + 2.3, 3);
+        const n = fbm(nx * 2.15 + q1 * 3.6, ny * 2.15 + q2 * 3.6, 5);
+
+        // envolvente: cuerpo + núcleo
+        const env = Math.exp(-Math.pow(rr * 1.62, 2.15));
+        const core = Math.exp(-Math.pow(r / 0.155, 2.0));
+
+        let d = env * Math.pow(n, 1.15) * 1.65;
+        d += core * (0.42 + 0.55 * Math.pow(n, 0.7));
+        d = Math.pow(clamp01(d), 1.18);
+
+        if (d <= 0.012) { data[i++] = 0; data[i++] = 0; data[i++] = 0; data[i++] = 255; continue; }
+
+        /* -------- paleta falso color -------- */
+        let R, G, B, A;
+        if (d < 0.20) {
+          const t = d / 0.20;
+          R = 34 * t; G = 3 * t; B = 20 * t; A = 0.55 * t;
+        } else if (d < 0.44) {
+          const t = (d - 0.20) / 0.24;
+          R = 34 + 104 * t; G = 3 + 13 * t; B = 20 + 78 * t; A = 0.55 + 0.25 * t;
+        } else if (d < 0.66) {
+          const t = (d - 0.44) / 0.22;
+          R = 138 + 82 * t; G = 16 + 18 * t; B = 98 + 106 * t; A = 0.80 + 0.06 * t;
+        } else if (d < 0.83) {
+          const t = (d - 0.66) / 0.17;
+          R = 220 + 34 * t; G = 34 + 104 * t; B = 204 + 36 * t; A = 0.88;
+        } else {
+          const t = (d - 0.83) / 0.17;
+          R = 254; G = 138 + 112 * t; B = 240 + 15 * t; A = 0.95;
+        }
+
+        // tintes locales: verde-cian abajo, oro a la izquierda
+        const rim = smoothstep(0.18, 0.46, d) * (1 - smoothstep(0.58, 0.86, d));
+        const green = rim * smoothstep(0.40, 0.78, v) * (0.45 + 0.75 * n);
+        const gold = rim * smoothstep(0.34, 0.02, u) * (0.35 + 0.65 * n);
+        R += 60 * green + 205 * gold;
+        G += 225 * green + 175 * gold;
+        B += 120 * green + 55 * gold;
+
+        // grano cromático suave para que no quede plano
+        const mott = 0.90 + 0.20 * n;
+
+        data[i++] = Math.min(255, R * mott);
+        data[i++] = Math.min(255, G * mott);
+        data[i++] = Math.min(255, B * mott);
+        data[i++] = Math.min(255, A * 255);
+      }
+    }
+
+    g.putImageData(img, 0, 0);
+    nebulaCanvas = c;
+  }
+
+  /* ============================================================
+     FILAMENTOS: geometría precalculada una sola vez.
+     Cada línea guarda sus puntos (normalizados) + color + fase.
+     ============================================================ */
+  const FIL = [];
+
+  function buildFilaments() {
+    const rnd = mulberry32(9137);
+    const step = 0.0065;
+
+    for (let k = 0; k < 1200; k++) {
+      // punto de partida sesgado hacia el núcleo
+      const a = rnd() * Math.PI * 2;
+      const rad = Math.pow(rnd(), 0.62) * 0.46;
+      let x = CX + Math.cos(a) * rad * 0.98;
+      let y = CY + Math.sin(a) * rad * 1.04;
+
+      const dist = Math.hypot(x - CX, (y - CY) * 1.02);
+      const lower = y > 0.52;
+
+      // color según distancia al núcleo
+      let col, alpha, width;
+      if (dist < 0.13) {
+        col = "255," + (200 + (rnd() * 55 | 0)) + ",255"; alpha = 0.24; width = 1.15;
+      } else if (dist < 0.24) {
+        col = "255," + (120 + (rnd() * 80 | 0)) + ",245"; alpha = 0.18; width = 0.95;
+      } else if (lower && rnd() < 0.45) {
+        col = (100 + (rnd() * 60 | 0)) + ",255," + (150 + (rnd() * 60 | 0)); alpha = 0.15; width = 0.8;
+      } else if (x < 0.40 && rnd() < 0.35) {
+        col = "255," + (215 + (rnd() * 30 | 0)) + ",120"; alpha = 0.14; width = 0.8;
+      } else {
+        col = (190 + (rnd() * 65 | 0)) + "," + (70 + (rnd() * 70 | 0)) + ",240"; alpha = 0.13; width = 0.75;
+      }
+
+      const steps = 10 + (rnd() * 16 | 0);
+      const pts = [[x, y]];
+
+      for (let s = 0; s < steps; s++) {
+        // flujo: perpendicular al gradiente de ruido + giro radial
+        const e = 0.006;
+        const f0 = fbm(x * 9, y * 9, 3);
+        const gx = fbm(x * 9 + e, y * 9, 3) - f0;
+        const gy = fbm(x * 9, y * 9 + e, 3) - f0;
+        let vx = -gy * 26, vy = gx * 26;
+        // remolino
+        vx += -(y - CY) * 0.55;
+        vy += (x - CX) * 0.55;
+        const len = Math.hypot(vx, vy) || 1;
+        x += (vx / len) * step;
+        y += (vy / len) * step;
+        pts.push([x, y]);
+      }
+
+      // fase y velocidad propias → cada línea se expande/regresa a su ritmo
+      FIL.push({
+        pts, col, alpha, width,
+        phase: rnd() * Math.PI * 2,
+        speed: 0.0009 + rnd() * 0.0009
+      });
+    }
+  }
+
+  /* Dibuja cada línea expandiéndose radialmente desde el núcleo y regresando.
+     sc = 1 → tamaño original; sc > 1 → expandida (hacia afuera). */
+  function drawFilamentsAnimated(x0, y0, side, t) {
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    for (let k = 0; k < FIL.length; k++) {
+      const L = FIL[k];
+      // 0 → 1 → 0 : se expande y regresa (nunca se encoge por debajo del original)
+      const grow = 0.5 - 0.5 * Math.cos(t * L.speed + L.phase);
+      const sc = 1 + 0.15 * grow;
+
+      ctx.strokeStyle = "rgba(" + L.col + "," + L.alpha + ")";
+      ctx.lineWidth = L.width;
+      ctx.beginPath();
+      const pts = L.pts;
+      for (let i = 0; i < pts.length; i++) {
+        const nx = CX + (pts[i][0] - CX) * sc;
+        const ny = CY + (pts[i][1] - CY) * sc;
+        const sx = x0 + nx * side;
+        const sy = y0 + ny * side;
+        if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /* ============================================================
+     BRILLO DEL NÚCLEO
+     ============================================================ */
+  function drawCore(cx, cy, side) {
+    const grads = [
+      { r: 0.30, stops: [[0, "rgba(150,40,190,.20)"], [0.5, "rgba(120,20,160,.08)"], [1, "rgba(0,0,0,0)"]] },
+      { r: 0.14, stops: [[0, "rgba(255,170,240,.55)"], [0.45, "rgba(230,90,220,.26)"], [1, "rgba(0,0,0,0)"]] },
+      { r: 0.055, stops: [[0, "rgba(255,255,255,.95)"], [0.45, "rgba(255,225,255,.55)"], [1, "rgba(255,170,245,0)"]] }
+    ];
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    grads.forEach(g => {
+      const rr = g.r * side;
+      const rg = ctx.createRadialGradient(cx, cy, 0, cx, cy, rr);
+      g.stops.forEach(([p, c]) => rg.addColorStop(p, c));
+      ctx.fillStyle = rg;
+      ctx.beginPath();
+      ctx.arc(cx, cy, rr, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
+  }
+
+  /* ============================================================
+     ESTRELLAS
+     ============================================================ */
+  function drawStars(g, W, H) {
+    const rnd = mulberry32(4242421);
+    const n = Math.round((W * H) / 2600);
+    g.save();
+    g.globalCompositeOperation = "lighter";
+
+    for (let i = 0; i < n; i++) {
+      const x = rnd() * W;
+      const y = rnd() * H;
+      const t = rnd();
+      const big = t > 0.972;
+      const mid = !big && t > 0.86;
+      const rad = big ? 1.5 + rnd() * 1.9 : mid ? 0.9 + rnd() * 0.8 : 0.35 + rnd() * 0.55;
+
+      const blue = 0.55 + rnd() * 0.45;
+      const col = big || mid
+        ? "rgba(" + (190 + (rnd() * 40 | 0)) + "," + (218 + (rnd() * 30 | 0)) + ",255,"
+        : "rgba(" + (170 + (rnd() * 50 | 0)) + "," + (200 + (rnd() * 40 | 0)) + ",255,";
+
+      // halo
+      const hr = rad * (big ? 9 : mid ? 5.5 : 3.4);
+      const hg = g.createRadialGradient(x, y, 0, x, y, hr);
+      hg.addColorStop(0, col + (big ? 0.55 : 0.30) + ")");
+      hg.addColorStop(0.35, col + (big ? 0.16 : 0.07) + ")");
+      hg.addColorStop(1, col + "0)");
+      g.fillStyle = hg;
+      g.beginPath(); g.arc(x, y, hr, 0, Math.PI * 2); g.fill();
+
+      // núcleo
+      g.fillStyle = "rgba(235,244,255," + (0.65 + blue * 0.35) + ")";
+      g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill();
+
+      // destellos en las más brillantes
+      if (big) {
+        const len = rad * (5 + rnd() * 5);
+        const lg = g.createLinearGradient(x - len, y, x + len, y);
+        lg.addColorStop(0, col + "0)");
+        lg.addColorStop(0.5, col + "0.55)");
+        lg.addColorStop(1, col + "0)");
+        g.fillStyle = lg;
+        g.fillRect(x - len, y - 0.5, len * 2, 1);
+        const lv = g.createLinearGradient(x, y - len, x, y + len);
+        lv.addColorStop(0, col + "0)");
+        lv.addColorStop(0.5, col + "0.45)");
+        lv.addColorStop(1, col + "0)");
+        g.fillStyle = lv;
+        g.fillRect(x - 0.5, y - len, 1, len * 2);
+      }
+    }
+    g.restore();
+  }
+
+  /* ============================================================
+     POLVO CÓSMICO (partículas finas + nubes tenues)
+     ============================================================ */
+  function drawDust(g, W, H, x0, y0, side) {
+    const rnd = mulberry32(31337);
+    g.save();
+    g.globalCompositeOperation = "lighter";
+
+    // partículas finas dispersas por todo el campo
+    const count = Math.round((W * H) / 1400);
+    for (let i = 0; i < count; i++) {
+      const x = rnd() * W;
+      const y = rnd() * H;
+      const warm = rnd() < 0.45;
+      const R = warm ? 205 + (rnd() * 50 | 0) : 150 + (rnd() * 60 | 0);
+      const G = warm ? 170 + (rnd() * 50 | 0) : 180 + (rnd() * 50 | 0);
+      const B = warm ? 130 + (rnd() * 50 | 0) : 225 + (rnd() * 30 | 0);
+      const rad = 0.25 + rnd() * 0.95;
+      const a = 0.03 + rnd() * 0.13;
+      g.fillStyle = "rgba(" + R + "," + G + "," + B + "," + a.toFixed(3) + ")";
+      g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill();
+    }
+
+    // nubes de polvo muy tenues, agrupadas alrededor de la nebulosa
+    const ccx = x0 + CX * side;
+    const ccy = y0 + CY * side;
+    for (let i = 0; i < 28; i++) {
+      const ang = rnd() * Math.PI * 2;
+      const dist = Math.pow(rnd(), 0.7) * side * 0.52;
+      const x = ccx + Math.cos(ang) * dist;
+      const y = ccy + Math.sin(ang) * dist * 0.95;
+      const rr = 18 + rnd() * 80;
+      const a = 0.02 + rnd() * 0.05;
+      const warm = rnd() < 0.5;
+      const R = warm ? 210 : 135;
+      const G = warm ? 165 : 150;
+      const B = warm ? 120 : 215;
+      const rg = g.createRadialGradient(x, y, 0, x, y, rr);
+      rg.addColorStop(0, "rgba(" + R + "," + G + "," + B + "," + a.toFixed(3) + ")");
+      rg.addColorStop(1, "rgba(" + R + "," + G + "," + B + ",0)");
+      g.fillStyle = rg;
+      g.beginPath(); g.arc(x, y, rr, 0, Math.PI * 2); g.fill();
+    }
+    g.restore();
+  }
+
+  /* ============================================================
+     CAPA DE ESTRELLAS (se reconstruye solo al redimensionar)
+     ============================================================ */
+  let starLayer = null, dustLayer = null;
+  let baseX0 = 0, baseY0 = 0, baseSide = 0;
+
+  function buildScene(W, H) {
+    baseSide = Math.min(W, H) * 1.04;
+    baseX0 = (W - baseSide) / 2;
+    baseY0 = (H - baseSide) / 2;
+
+    dustLayer = document.createElement("canvas");
+    dustLayer.width = W; dustLayer.height = H;
+    drawDust(dustLayer.getContext("2d"), W, H, baseX0, baseY0, baseSide);
+
+    starLayer = document.createElement("canvas");
+    starLayer.width = W; starLayer.height = H;
+    drawStars(starLayer.getContext("2d"), W, H);
+  }
+
+  /* ============================================================
+     GRANO
+     ============================================================ */
+  function buildGrain() {
+    const s = 140;
+    const c = document.createElement("canvas");
+    c.width = c.height = s;
+    const g = c.getContext("2d");
+    const img = g.createImageData(s, s);
+    const rnd = mulberry32(77);
+    for (let i = 0; i < img.data.length; i += 4) {
+      const v = 110 + rnd() * 90;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+      img.data[i + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+    document.documentElement.style.setProperty("--grain", "url(" + c.toDataURL() + ")");
+  }
+
+  /* ============================================================
+     RENDER: nebulosa/núcleo/estrellas estáticos
+     + único efecto: cada línea se expande y regresa
+     ============================================================ */
+  let raf = null, lastW = 0, lastH = 0;
+
+  function frame(ts) {
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    const DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+    // (re)construir capas y dimensiones solo cuando cambia el viewport
+    if (W !== lastW || H !== lastH) {
+      cv.width = Math.round(W * DPR);
+      cv.height = Math.round(H * DPR);
+      cv.style.width = W + "px";
+      cv.style.height = H + "px";
+      lastW = W; lastH = H;
+      buildScene(W, H);
+    }
+
+    if (!nebulaCanvas) buildNebula();
+
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, W, H);
+
+    const t = ts || 0;
+
+    // nebulosa estática
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(nebulaCanvas, baseX0, baseY0, baseSide, baseSide);
+    ctx.restore();
+
+    // filamentos: cada línea se expande y regresa
+    drawFilamentsAnimated(baseX0, baseY0, baseSide, t);
+
+    // núcleo estático
+    const coreX = baseX0 + CX * baseSide;
+    const coreY = baseY0 + CY * baseSide;
+    drawCore(coreX, coreY, baseSide);
+
+    // polvo cósmico (capa estática)
+    if (dustLayer) {
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.drawImage(dustLayer, 0, 0, W, H);
+      ctx.restore();
+    }
+
+    // estrellas estáticas
+    if (starLayer) {
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.drawImage(starLayer, 0, 0, W, H);
+      ctx.restore();
+    }
+
+    raf = requestAnimationFrame(frame);
+  }
+
+  buildGrain();
+  buildFilaments();
+  raf = requestAnimationFrame(frame);
+  window.addEventListener("resize", () => { /* el loop detecta el cambio */ });
+})();
+</script>
+</body>
+</html>

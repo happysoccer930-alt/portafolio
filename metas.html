@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Metas | Daniel Oscoc Abad</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-card: rgba(255, 255, 255, 0.025);
+            --border: rgba(255, 255, 255, 0.07);
+            --accent: rgba(160, 160, 255, 0.72);
+            --text: rgba(255, 255, 255, 0.88);
+            --text-dim: rgba(255, 255, 255, 0.45);
+            --text-mute: rgba(255, 255, 255, 0.28);
+            --font-serif: 'Cormorant Garamond', Georgia, serif;
+            --font-sans: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: var(--font-sans);
+            background: #000;
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            line-height: 1.7;
+        }
+
+        /* === FONDO: nebulosa procedural === */
+        #nebula-bg {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+            z-index: 0;
+            pointer-events: none;
+            background: #000;
+        }
+
+        .vignette {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+            background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 55%, rgba(0,0,0,0.85) 100%);
+        }
+
+        /* === NAV === */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 1.5rem 3rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav-logo {
+            font-family: var(--font-serif);
+            font-size: 1.3rem;
+            font-weight: 300;
+            letter-spacing: 0.3em;
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .nav-back {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--text-dim);
+            text-decoration: none;
+            padding: 0.6rem 1.3rem;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            transition: all 0.4s ease;
+        }
+
+        .nav-back:hover {
+            color: var(--text);
+            border-color: rgba(160, 160, 255, 0.45);
+            background: rgba(160, 160, 255, 0.06);
+        }
+
+        /* === LAYOUT === */
+        main {
+            position: relative;
+            z-index: 2;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 9rem 2rem 6rem;
+        }
+
+        .section-tag {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--text-mute);
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            display: block;
+            margin-bottom: 1rem;
+        }
+
+        .section-title {
+            font-family: var(--font-serif);
+            font-size: clamp(2.2rem, 5.5vw, 3.4rem);
+            font-weight: 300;
+            letter-spacing: 0.06em;
+            color: rgba(255, 255, 255, 0.92);
+            line-height: 1.15;
+        }
+
+        .section-subtitle {
+            color: var(--text-dim);
+            font-size: 0.95rem;
+            font-weight: 300;
+            letter-spacing: 0.03em;
+            max-width: 520px;
+            margin-top: 1.1rem;
+        }
+
+        .section-header { margin-bottom: 3.5rem; }
+
+        .divider {
+            height: 1px;
+            border: 0;
+            background: linear-gradient(90deg, transparent, var(--border), transparent);
+            margin: 5rem 0 4rem;
+        }
+
+        /* === HERO === */
+        .hero .eyebrow {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.25em;
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+        }
+
+        /* === METAS === */
+        .goals {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .goal {
+            position: relative;
+            padding: 2rem 1.8rem;
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            background: rgba(10, 10, 18, 0.45);
+            backdrop-filter: blur(14px) saturate(120%);
+            -webkit-backdrop-filter: blur(14px) saturate(120%);
+            transition: all 0.5s ease;
+            overflow: hidden;
+        }
+
+        .goal::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(160, 160, 255, 0.4), transparent);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .goal:hover {
+            border-color: rgba(160, 160, 255, 0.32);
+            background: rgba(24, 24, 44, 0.55);
+            transform: translateY(-4px);
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+        }
+
+        .goal:hover::before { opacity: 1; }
+
+        .goal .num {
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            letter-spacing: 0.22em;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+
+        .goal h3 {
+            font-family: var(--font-serif);
+            font-size: 1.35rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+            color: rgba(255, 255, 255, 0.92);
+            margin-bottom: 0.6rem;
+        }
+
+        .goal p {
+            font-size: 0.88rem;
+            font-weight: 300;
+            color: var(--text-dim);
+            line-height: 1.65;
+        }
+
+        /* === RUTA === */
+        .timeline {
+            margin-top: 2rem;
+            border-left: 1px solid var(--border);
+            padding-left: 2rem;
+        }
+
+        .step {
+            position: relative;
+            padding-bottom: 2.5rem;
+        }
+
+        .step:last-child { padding-bottom: 0; }
+
+        .step::before {
+            content: '';
+            position: absolute;
+            left: -2.35rem;
+            top: 0.6rem;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(160, 160, 255, 0.6);
+            box-shadow: 0 0 14px rgba(160, 160, 255, 0.6);
+        }
+
+        .step .when {
+            font-family: var(--font-mono);
+            font-size: 0.62rem;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            color: var(--text-mute);
+        }
+
+        .step h4 {
+            font-family: var(--font-serif);
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.9);
+            margin: 0.4rem 0 0.25rem;
+        }
+
+        .step p {
+            font-size: 0.86rem;
+            font-weight: 300;
+            color: var(--text-dim);
+        }
+
+        /* === CIERRE === */
+        .closing {
+            margin-top: 5rem;
+            padding: 2.75rem;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            background: rgba(10, 10, 18, 0.5);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            text-align: center;
+        }
+
+        .closing p {
+            font-family: var(--font-serif);
+            font-size: clamp(1.2rem, 2.6vw, 1.6rem);
+            font-weight: 300;
+            font-style: italic;
+            color: rgba(255, 255, 255, 0.82);
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.9rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 300;
+            text-decoration: none;
+            transition: all 0.5s ease;
+            letter-spacing: 0.1em;
+            color: var(--text-dim);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: transparent;
+        }
+
+        .btn:hover {
+            color: #fff;
+            border-color: rgba(160, 160, 255, 0.45);
+            background: rgba(160, 160, 255, 0.08);
+        }
+
+        /* === FOOTER === */
+        footer {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            padding: 3rem 2rem 5rem;
+            border-top: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(10px);
+        }
+
+        footer p {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            letter-spacing: 0.1em;
+            color: var(--text-mute);
+        }
+
+        footer a {
+            color: var(--text-dim);
+            text-decoration: none;
+            transition: color 0.4s ease;
+        }
+
+        footer a:hover { color: var(--text); }
+
+        /* === APARICIÓN === */
+        .reveal {
+            opacity: 0;
+            transform: translateY(26px);
+            transition: opacity 0.9s ease, transform 0.9s ease;
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @media (max-width: 640px) {
+            nav { padding: 1.1rem 1.4rem; }
+            main { padding: 8rem 1.4rem 5rem; }
+            .goal { padding: 1.6rem 1.4rem; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .reveal { opacity: 1; transform: none; transition: none; }
+        }
+    </style>
+</head>
+<body>
+    <iframe id="nebula-bg" src="nebulosa.html" title="" aria-hidden="true" tabindex="-1"></iframe>
+    <div class="vignette"></div>
+
+    <nav>
+        <a href="index.html" class="nav-logo">Oscco</a>
+        <a href="index.html" class="nav-back">&larr; Portafolio</a>
+    </nav>
+
+    <main>
+        <header class="hero reveal">
+            <div class="eyebrow">// metas</div>
+            <h1 class="section-title">Hacia dónde voy</h1>
+            <p class="section-subtitle">
+                No son deseos sueltos: es la ruta que estoy siguiendo, paso a paso,
+                entre clases, proyectos y noches de código.
+            </p>
+        </header>
+
+        <section>
+            <div class="goals">
+                <article class="goal reveal">
+                    <div class="num">01</div>
+                    <h3>Crear mis propios proyectos</h3>
+                    <p>Sacar las ideas del cuaderno y convertirlas en aplicaciones y juegos reales, publicados y usables.</p>
+                </article>
+
+                <article class="goal reveal">
+                    <div class="num">02</div>
+                    <h3>Aprender full stack</h3>
+                    <p>Dominar el camino completo: interfaz, lógica de servidor, bases de datos y despliegue.</p>
+                </article>
+
+                <article class="goal reveal">
+                    <div class="num">03</div>
+                    <h3>Conseguir trabajo</h3>
+                    <p>Entrar al mundo profesional como desarrollador y aprender de un equipo real.</p>
+                </article>
+
+                <article class="goal reveal">
+                    <div class="num">04</div>
+                    <h3>Seguir primero en el Tello</h3>
+                    <p>Mantener el primer puesto y la disciplina que me trajo hasta aquí.</p>
+                </article>
+
+                <article class="goal reveal">
+                    <div class="num">05</div>
+                    <h3>Terminar la carrera</h3>
+                    <p>Graduarme como Ingeniero de Sistemas con un portafolio que hable por mí.</p>
+                </article>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <section>
+            <div class="section-header reveal">
+                <span class="section-tag">// ruta</span>
+                <h2 class="section-title">Mi plan</h2>
+            </div>
+
+            <div class="timeline reveal">
+                <div class="step">
+                    <div class="when">Ahora</div>
+                    <h4>Fundamentos sólidos</h4>
+                    <p>Java, JavaScript, estructuras de datos y bases de datos. Primer puesto en el instituto.</p>
+                </div>
+                <div class="step">
+                    <div class="when">En paralelo</div>
+                    <h4>Proyectos propios</h4>
+                    <p>Tutor con IA, portafolio, quiz de full stack y juegos. Aprender construyendo.</p>
+                </div>
+                <div class="step">
+                    <div class="when">Siguiente</div>
+                    <h4>Full stack profesional</h4>
+                    <p>Backend, APIs, despliegue y trabajo en equipo con Git.</p>
+                </div>
+                <div class="step">
+                    <div class="when">Meta</div>
+                    <h4>Trabajo y título</h4>
+                    <p>Desarrollador en activo y graduado en Ingeniería de Sistemas.</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="closing reveal">
+            <p>“La constancia vale más que el talento.”</p>
+            <div class="hero-buttons">
+                <a href="mis-estudios.html" class="btn">Dónde estudio</a>
+                <a href="index.html" class="btn">Volver al portafolio</a>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Daniel Oscoc Abad &middot; <a href="index.html">Portafolio</a></p>
+    </footer>
+
+    <script>
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.reveal').forEach((el, i) => {
+            el.style.transitionDelay = (i % 4) * 80 + 'ms';
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>

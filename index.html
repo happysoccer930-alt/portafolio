@@ -1,0 +1,1701 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daniel Oscoc Abad | Portafolio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+        }
+    }
+    </script>
+    <style>
+        :root {
+            --bg: #000;
+            --bg-card: rgba(255, 255, 255, 0.02);
+            --border: rgba(255, 255, 255, 0.06);
+            --accent: rgba(160, 160, 255, 0.7);
+            --accent-soft: rgba(160, 160, 255, 0.15);
+            --text: rgba(255, 255, 255, 0.85);
+            --text-dim: rgba(255, 255, 255, 0.4);
+            --text-mute: rgba(255, 255, 255, 0.25);
+            --font-serif: 'Cormorant Garamond', Georgia, serif;
+            --font-sans: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* === 3D CANVAS === */
+        #three-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* === VIGNETTE === */
+        .vignette {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+            background: radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.5) 100%);
+        }
+
+        /* === NAV === */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 1.5rem 3rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav-logo {
+            font-family: var(--font-serif);
+            font-size: 1.3rem;
+            font-weight: 300;
+            letter-spacing: 0.3em;
+            color: var(--text);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2.5rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 300;
+            letter-spacing: 0.05em;
+            transition: color 0.4s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--text);
+        }
+
+        /* === HERO === */
+        .hero {
+            position: relative;
+            z-index: 2;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 6rem 2rem 4rem;
+            background: radial-gradient(ellipse at 50% 40%, rgba(20, 20, 40, 0.4) 0%, transparent 70%);
+            opacity: 0;
+            animation: heroFadeIn 2s 0.5s ease-out forwards;
+        }
+
+        @keyframes heroFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .hero-content {
+            animation: heroReveal 1.8s 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+        }
+
+        @keyframes heroReveal {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Two moons echo from loading screen */
+        .hero-moon {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0;
+            animation: moonReveal 3s 2s ease-out forwards;
+        }
+
+        .hero-moon.one {
+            width: 60px;
+            height: 60px;
+            top: 12%;
+            right: 18%;
+            background: radial-gradient(circle at 35% 35%, rgba(220, 225, 240, 0.5), rgba(100, 110, 150, 0.15));
+            box-shadow: 0 0 60px rgba(180, 190, 230, 0.2), 0 0 120px rgba(150, 160, 200, 0.08);
+        }
+
+        .hero-moon.two {
+            width: 35px;
+            height: 35px;
+            top: 22%;
+            left: 15%;
+            background: radial-gradient(circle at 40% 35%, rgba(200, 190, 160, 0.4), rgba(100, 90, 70, 0.1));
+            box-shadow: 0 0 40px rgba(180, 170, 130, 0.15), 0 0 80px rgba(150, 140, 100, 0.06);
+        }
+
+        @keyframes moonReveal {
+            from { opacity: 0; transform: scale(0.5); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* === PHOTO === */
+        .photo-frame {
+            width: 180px;
+            height: 180px;
+            margin: 0 auto 3rem;
+            border-radius: 50%;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 40px rgba(100, 100, 200, 0.15), 0 0 80px rgba(100, 100, 200, 0.05);
+            animation: photoGlow 4s ease-in-out infinite;
+        }
+
+        /* Moon-like glow behind photo */
+        .photo-frame::after {
+            content: '';
+            position: absolute;
+            width: 240px;
+            height: 240px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(180, 190, 220, 0.08) 0%, transparent 70%);
+            pointer-events: none;
+            animation: moonBreath 5s ease-in-out infinite;
+        }
+
+        @keyframes moonBreath {
+            0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+        }
+
+        @keyframes photoGlow {
+            0%, 100% { box-shadow: 0 0 40px rgba(100, 100, 200, 0.15), 0 0 80px rgba(100, 100, 200, 0.05); }
+            50% { box-shadow: 0 0 50px rgba(100, 100, 200, 0.25), 0 0 100px rgba(100, 100, 200, 0.08); }
+        }
+
+        .photo-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: grayscale(20%) brightness(0.9);
+            transition: filter 0.5s ease;
+        }
+
+        .photo-frame:hover img {
+            filter: grayscale(0%) brightness(1);
+        }
+
+        .photo-ring {
+            position: absolute;
+            inset: -3px;
+            border-radius: 50%;
+            border: 1px solid rgba(160, 160, 255, 0.2);
+            animation: ringPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes ringPulse {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.02); }
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.4rem 1.2rem;
+            background: var(--accent-soft);
+            border: 1px solid rgba(160, 160, 255, 0.15);
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 400;
+            color: var(--accent);
+            margin-bottom: 2rem;
+            letter-spacing: 0.08em;
+            font-family: var(--font-mono);
+        }
+
+        .hero-badge .dot {
+            width: 5px;
+            height: 5px;
+            background: rgba(100, 255, 150, 0.8);
+            border-radius: 50%;
+            animation: dotBlink 3s ease-in-out infinite;
+        }
+
+        @keyframes dotBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .hero h1 {
+            font-family: var(--font-serif);
+            font-size: clamp(2.8rem, 7vw, 5rem);
+            font-weight: 300;
+            letter-spacing: 0.15em;
+            line-height: 1.2;
+            margin-bottom: 0.5rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .hero h1 .light {
+            font-weight: 300;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .hero-role {
+            font-family: var(--font-serif);
+            font-size: clamp(1.1rem, 3vw, 1.5rem);
+            font-weight: 300;
+            color: var(--text-dim);
+            letter-spacing: 0.2em;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        .hero-line {
+            width: 40px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            margin: 0 auto 2rem;
+        }
+
+        .hero-description {
+            font-size: 1rem;
+            color: var(--text-dim);
+            max-width: 480px;
+            margin: 0 auto 3rem;
+            line-height: 1.8;
+            font-weight: 300;
+            letter-spacing: 0.02em;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.8rem 2rem;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 300;
+            text-decoration: none;
+            transition: all 0.5s ease;
+            cursor: pointer;
+            border: none;
+            font-family: var(--font-sans);
+            letter-spacing: 0.1em;
+        }
+
+        .btn-primary {
+            color: rgba(255, 255, 255, 0.7);
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+        }
+
+        .btn-primary:hover {
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .btn-secondary {
+            color: var(--text-dim);
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .btn-secondary:hover {
+            color: var(--text);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* === SCROLL === */
+        .scroll-indicator {
+            position: absolute;
+            bottom: 2.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            animation: scrollBounce 3s ease-in-out infinite;
+        }
+
+        .scroll-indicator span {
+            font-size: 0.65rem;
+            color: var(--text-mute);
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            font-family: var(--font-mono);
+        }
+
+        .scroll-arrow {
+            width: 16px;
+            height: 16px;
+            border-right: 1px solid var(--text-mute);
+            border-bottom: 1px solid var(--text-mute);
+            transform: rotate(45deg);
+        }
+
+        @keyframes scrollBounce {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(6px); }
+        }
+
+        /* === SECTIONS === */
+        section {
+            position: relative;
+            z-index: 2;
+            padding: 8rem 2rem;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 5rem;
+        }
+
+        .section-tag {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--text-mute);
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .section-title {
+            font-family: var(--font-serif);
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 300;
+            letter-spacing: 0.1em;
+            color: rgba(255, 255, 255, 0.85);
+            margin-bottom: 0.75rem;
+        }
+
+        .section-subtitle {
+            color: var(--text-mute);
+            font-size: 0.95rem;
+            max-width: 400px;
+            margin: 0 auto;
+            font-weight: 300;
+            letter-spacing: 0.03em;
+        }
+
+        .section-line {
+            width: 30px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--text-mute), transparent);
+            margin: 1.5rem auto 0;
+        }
+
+        /* === ABOUT === */
+        .about-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+        }
+
+        .about-info p {
+            color: var(--text-dim);
+            line-height: 1.9;
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+            font-weight: 300;
+        }
+
+        .about-info p strong {
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .about-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.4s ease;
+        }
+
+        .stat-card:hover {
+            border-color: rgba(160, 160, 255, 0.2);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .stat-number {
+            font-family: var(--font-serif);
+            font-size: 1.8rem;
+            font-weight: 300;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--text-mute);
+            font-family: var(--font-mono);
+            letter-spacing: 0.05em;
+        }
+
+        /* === PROJECTS === */
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .project-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 2rem;
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+            display: block;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .project-card:hover {
+            border-color: rgba(160, 160, 255, 0.2);
+            background: rgba(255, 255, 255, 0.03);
+            transform: translateY(-4px);
+        }
+
+        .project-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.25rem 0.7rem;
+            border-radius: 50px;
+            font-size: 0.65rem;
+            font-weight: 400;
+            margin-bottom: 1rem;
+            font-family: var(--font-mono);
+            letter-spacing: 0.05em;
+        }
+
+        .status-completed {
+            background: rgba(100, 255, 150, 0.05);
+            color: rgba(100, 255, 150, 0.6);
+            border: 1px solid rgba(100, 255, 150, 0.1);
+        }
+
+        .status-progress {
+            background: rgba(255, 200, 50, 0.05);
+            color: rgba(255, 200, 50, 0.6);
+            border: 1px solid rgba(255, 200, 50, 0.1);
+        }
+
+        .project-card h3 {
+            font-family: var(--font-serif);
+            font-size: 1.3rem;
+            font-weight: 400;
+            margin-bottom: 0.75rem;
+            color: rgba(255, 255, 255, 0.85);
+            letter-spacing: 0.03em;
+        }
+
+        .project-card p {
+            color: var(--text-dim);
+            line-height: 1.7;
+            font-size: 0.85rem;
+            margin-bottom: 1.5rem;
+            font-weight: 300;
+        }
+
+        .tech-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        .tech-tag {
+            padding: 0.2rem 0.6rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-family: var(--font-mono);
+            color: var(--text-mute);
+            letter-spacing: 0.03em;
+        }
+
+        .project-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+            padding: 0.6rem 1.2rem;
+            border: 1px solid rgba(160, 160, 255, 0.18);
+            border-radius: 50px;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .project-btn:hover {
+            border-color: rgba(160, 160, 255, 0.45);
+            background: rgba(160, 160, 255, 0.08);
+            color: #fff;
+            transform: translateX(3px);
+        }
+
+        /* === SKILLS === */
+        .skills-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .skill-category {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 2rem;
+        }
+
+        .skill-category h4 {
+            font-size: 0.85rem;
+            font-weight: 400;
+            margin-bottom: 1.5rem;
+            color: rgba(255, 255, 255, 0.6);
+            letter-spacing: 0.05em;
+            font-family: var(--font-mono);
+        }
+
+        .skill-item {
+            margin-bottom: 1.25rem;
+        }
+
+        .skill-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .skill-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.4rem;
+        }
+
+        .skill-name {
+            font-size: 0.8rem;
+            font-weight: 300;
+            color: var(--text-dim);
+        }
+
+        .skill-level {
+            font-size: 0.7rem;
+            color: var(--text-mute);
+            font-family: var(--font-mono);
+        }
+
+        .skill-bar {
+            height: 2px;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 1px;
+            overflow: hidden;
+        }
+
+        .skill-fill {
+            height: 100%;
+            border-radius: 1px;
+            background: linear-gradient(90deg, rgba(160, 160, 255, 0.3), rgba(160, 160, 255, 0.6));
+            transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+            width: 0;
+        }
+
+        .skill-fill.animate {
+            width: var(--level);
+        }
+
+        /* === CONTACT === */
+        .contact-section {
+            text-align: center;
+            padding-bottom: 6rem;
+        }
+
+        .contact-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 4rem 2rem;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .contact-card h3 {
+            font-family: var(--font-serif);
+            font-size: 1.8rem;
+            font-weight: 300;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .contact-card p {
+            color: var(--text-dim);
+            margin-bottom: 2.5rem;
+            line-height: 1.8;
+            font-weight: 300;
+            font-size: 0.9rem;
+        }
+
+        /* === REDES === */
+        .social-row {
+            display: flex;
+            gap: 0.7rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .btn-social {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            padding: 0.75rem 1.4rem;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            font-weight: 300;
+            letter-spacing: 0.06em;
+            text-decoration: none;
+            color: var(--text-dim);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: transparent;
+            transition: all 0.45s ease;
+        }
+
+        .btn-social svg {
+            width: 16px;
+            height: 16px;
+            flex: none;
+            fill: currentColor;
+        }
+
+        .btn-social:hover {
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.25);
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateY(-2px);
+        }
+
+        .btn-social.wa:hover {
+            border-color: rgba(37, 211, 102, 0.5);
+            background: rgba(37, 211, 102, 0.08);
+            box-shadow: 0 12px 32px rgba(37, 211, 102, 0.14);
+        }
+
+        .btn-social.ig:hover {
+            border-color: rgba(225, 48, 108, 0.5);
+            background: rgba(225, 48, 108, 0.08);
+            box-shadow: 0 12px 32px rgba(225, 48, 108, 0.14);
+        }
+
+        /* === FOOTER === */
+        footer {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            padding: 2rem;
+            border-top: 1px solid var(--border);
+        }
+
+        footer p {
+            color: var(--text-mute);
+            font-size: 0.75rem;
+            font-family: var(--font-mono);
+            letter-spacing: 0.05em;
+        }
+
+        /* === REVEAL === */
+        .reveal {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* === RESPONSIVE === */
+        @media (max-width: 768px) {
+            nav {
+                padding: 1rem 1.5rem;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .about-grid {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            .photo-frame {
+                width: 140px;
+                height: 140px;
+            }
+
+            section {
+                padding: 5rem 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Three.js 3D Background -->
+    <canvas id="three-canvas"></canvas>
+    <div class="vignette"></div>
+
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-logo">Oscco</div>
+        <ul class="nav-links">
+            <li><a href="#about">Sobre mí</a></li>
+            <li><a href="mis-estudios.html">Estudios</a></li>
+            <li><a href="metas.html">Metas</a></li>
+            <li><a href="#projects">Proyectos</a></li>
+            <li><a href="#skills">Skills</a></li>
+            <li><a href="#contact">Contacto</a></li>
+        </ul>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-moon one"></div>
+        <div class="hero-moon two"></div>
+        <div class="hero-content">
+            <!-- Foto de Daniel -->
+            <div class="photo-frame">
+                <img src="foto-daniel.jpg" alt="Daniel Oscoc Abad">
+                <div class="photo-ring"></div>
+            </div>
+
+            <div class="hero-badge">
+                <span class="dot"></span>
+                Ing. de Sistemas — 2do Ciclo
+            </div>
+
+            <h1>
+                <span class="light">Daniel</span><br>
+                Oscoc Abad
+            </h1>
+
+            <p class="hero-role">Explorador digital · Constructor de universos</p>
+
+            <div class="hero-line"></div>
+
+            <p class="hero-description">
+                De la noche del código nacen mis proyectos. Apasionado por la inteligencia artificial, 
+                el desarrollo web y crear tecnología que brille como las estrellas.
+            </p>
+
+            <div class="hero-buttons">
+                <a href="#projects" class="btn btn-primary">Explorar Proyectos</a>
+                <a href="mis-estudios.html" class="btn btn-secondary">Dónde estudio</a>
+                <a href="metas.html" class="btn btn-secondary">Mis metas</a>
+                <a href="#contact" class="btn btn-secondary">Contactar</a>
+            </div>
+        </div>
+        <div class="scroll-indicator">
+            <span>Scroll</span>
+            <div class="scroll-arrow"></div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about">
+        <div class="section-header reveal">
+            <span class="section-tag">// sobre mí</span>
+            <h2 class="section-title">¿Quién soy?</h2>
+            <p class="section-subtitle">Estudiante, desarrollador y soñador que codea hasta las 2 AM</p>
+            <div class="section-line"></div>
+        </div>
+        <div class="about-grid">
+            <div class="about-info reveal">
+                <p>
+                    Soy <strong>Daniel Oscoc Abad</strong>, estudiante del segundo ciclo de 
+                    <strong>Ingeniería de Sistemas</strong>. Me mueve crear tecnología que resuelva 
+                    problemas reales y genere impacto tangible.
+                </p>
+                <p>
+                    Canalizo mi curiosidad en construir aplicaciones inteligentes, sistemas web 
+                    y explorar el mundo de la <strong>Inteligencia Artificial</strong>. 
+                    Cada proyecto es una oportunidad de aprender algo nuevo.
+                </p>
+                <p>
+                    Estoy en constante evolución — siempre buscando el siguiente reto 
+                    que me empuje a crecer como profesional y como persona.
+                </p>
+                <a class="project-btn" href="mis-estudios.html">Dónde estudio y mis metas &rarr;</a>
+            </div>
+            <div class="about-stats reveal">
+                <div class="stat-card">
+                    <div class="stat-number">2+</div>
+                    <div class="stat-label">PROYECTOS</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">2°</div>
+                    <div class="stat-label">CICLO</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">∞</div>
+                    <div class="stat-label">CURIOSIDAD</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">100%</div>
+                    <div class="stat-label">COMPROMISO</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Projects Section -->
+    <section id="projects">
+        <div class="section-header reveal">
+            <span class="section-tag">// proyectos</span>
+            <h2 class="section-title">Lo que he construido</h2>
+            <p class="section-subtitle">Cada proyecto es una pieza de mi crecimiento</p>
+            <div class="section-line"></div>
+        </div>
+        <div class="projects-grid">
+            <div class="project-card reveal">
+                <span class="project-status status-completed">✓ Completado</span>
+                <h3>Tutor con IA</h3>
+                <p>
+                    Sistema de tutoría inteligente en Java. Personaliza el aprendizaje 
+                    adaptando contenido y ritmo según el progreso del usuario.
+                </p>
+                <div class="tech-tags">
+                    <span class="tech-tag">Java</span>
+                    <span class="tech-tag">AI</span>
+                    <span class="tech-tag">Algorithms</span>
+                </div>
+            </div>
+
+            <a href="https://happysoccer930-alt.github.io/oscco-catalogo/" target="_blank" class="project-card reveal">
+                <span class="project-status status-completed">✓ Completado — Ver demo →</span>
+                <h3>Catálogo Web</h3>
+                <p>
+                    Catálogo digital con HTML. Interfaz limpia y funcional para organizar, 
+                    buscar y visualizar productos eficientemente.
+                </p>
+                <div class="tech-tags">
+                    <span class="tech-tag">HTML</span>
+                    <span class="tech-tag">CSS</span>
+                    <span class="tech-tag">JavaScript</span>
+                </div>
+            </a>
+
+            <div class="project-card reveal">
+                <span class="project-status status-completed">✓ Completado</span>
+                <h3>Examen Full Stack</h3>
+                <p>
+                    Quiz interactivo de 90 preguntas sobre Frontend, Backend, Bases de Datos,
+                    Arquitectura, DevOps y Seguridad, con explicación de cada respuesta y
+                    resultado por dominio.
+                </p>
+                <div class="tech-tags">
+                    <span class="tech-tag">React</span>
+                    <span class="tech-tag">JavaScript</span>
+                    <span class="tech-tag">UI Design</span>
+                </div>
+                <a class="project-btn" href="quiz-full-stack.html">Preguntas &rarr;</a>
+            </div>
+
+            <div class="project-card reveal">
+                <span class="project-status status-progress">● En desarrollo</span>
+                <h3>Portafolio Personal</h3>
+                <p>
+                    Este mismo sitio. Diseñado para impactar, con animaciones fluidas 
+                    y estética nocturna que refleja mi identidad.
+                </p>
+                <div class="tech-tags">
+                    <span class="tech-tag">HTML</span>
+                    <span class="tech-tag">CSS</span>
+                    <span class="tech-tag">Design</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Skills Section -->
+    <section id="skills">
+        <div class="section-header reveal">
+            <span class="section-tag">// habilidades</span>
+            <h2 class="section-title">Stack Técnico</h2>
+            <p class="section-subtitle">Las herramientas con las que materializo ideas</p>
+            <div class="section-line"></div>
+        </div>
+        <div class="skills-container">
+            <div class="skill-category reveal">
+                <h4>▸ Lenguajes</h4>
+                <div class="skill-item">
+                    <div class="skill-info">
+                        <span class="skill-name">Java</span>
+                        <span class="skill-level">85%</span>
+                    </div>
+                    <div class="skill-bar"><div class="skill-fill" style="--level: 85%"></div></div>
+                </div>
+                <div class="skill-item">
+                    <div class="skill-info">
+                        <span class="skill-name">JavaScript</span>
+                        <span class="skill-level">75%</span>
+                    </div>
+                    <div class="skill-bar"><div class="skill-fill" style="--level: 75%"></div></div>
+                </div>
+                <div class="skill-item">
+                    <div class="skill-info">
+                        <span class="skill-name">Python</span>
+                        <span class="skill-level">60%</span>
+                    </div>
+                    <div class="skill-bar"><div class="skill-fill" style="--level: 60%"></div></div>
+                </div>
+            </div>
+
+            <div class="skill-category reveal">
+                <h4>▸ Tecnologías</h4>
+                <div class="skill-item">
+                    <div class="skill-info">
+                        <span class="skill-name">HTML / CSS</span>
+                        <span class="skill-level">90%</span>
+                    </div>
+                    <div class="skill-bar"><div class="skill-fill" style="--level: 90%"></div></div>
+                </div>
+                <div class="skill-item">
+                    <div class="skill-info">
+                        <span class="skill-name">Git &amp; GitHub</span>
+                        <span class="skill-level">70%</span>
+                    </div>
+                    <div class="skill-bar"><div class="skill-fill" style="--level: 70%"></div></div>
+                </div>
+                <div class="skill-item">
+                    <div class="skill-info">
+                        <span class="skill-name">REST APIs</span>
+                        <span class="skill-level">65%</span>
+                    </div>
+                    <div class="skill-bar"><div class="skill-fill" style="--level: 65%"></div></div>
+                </div>
+            </div>
+
+            <div class="skill-category reveal">
+                <h4>▸ Conceptos</h4>
+                <div class="skill-item">
+                    <div class="skill-info">
+                        <span class="skill-name">POO</span>
+                        <span class="skill-level">85%</span>
+                    </div>
+                    <div class="skill-bar"><div class="skill-fill" style="--level: 85%"></div></div>
+                </div>
+                <div class="skill-item">
+                    <div class="skill-info">
+                        <span class="skill-name">Estructuras de Datos</span>
+                        <span class="skill-level">80%</span>
+                    </div>
+                    <div class="skill-bar"><div class="skill-fill" style="--level: 80%"></div></div>
+                </div>
+                <div class="skill-item">
+                    <div class="skill-info">
+                        <span class="skill-name">Bases de Datos</span>
+                        <span class="skill-level">70%</span>
+                    </div>
+                    <div class="skill-bar"><div class="skill-fill" style="--level: 70%"></div></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="contact-section">
+        <div class="contact-card reveal">
+            <h3>Conectemos</h3>
+            <p>
+                Abierto a oportunidades de aprendizaje, colaboraciones y proyectos. 
+                Si tienes una idea, escríbeme.
+            </p>
+            <div class="hero-buttons">
+                <a href="mailto:happysoccer930@gmail.com" class="btn btn-primary">Email</a>
+                <a href="https://github.com/happysoccer930-alt" target="_blank" rel="noopener" class="btn btn-secondary">GitHub</a>
+            </div>
+
+            <div class="social-row">
+                <a href="https://wa.me/51991374732" target="_blank" rel="noopener" class="btn-social wa" aria-label="WhatsApp">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+                    WhatsApp
+                </a>
+                <a href="https://www.instagram.com/dani3l718/" target="_blank" rel="noopener" class="btn-social ig" aria-label="Instagram">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.757 6.162 6.162 6.162 3.405 0 6.162-2.757 6.162-6.162 0-3.405-2.757-6.162-6.162-6.162zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z"/></svg>
+                    Instagram
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>© 2026 Daniel Oscoc Abad — Construido con café y código</p>
+    </footer>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // === RENDERER ===
+        const canvas = document.getElementById('three-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.3;
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+        camera.position.z = 30;
+
+        // === PROCEDURAL NOISE (Perlin-like for planet surfaces) ===
+        function hash2D(x, y) {
+            let n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+            return n - Math.floor(n);
+        }
+        function smoothNoise(x, y) {
+            const ix = Math.floor(x), iy = Math.floor(y);
+            const fx = x - ix, fy = y - iy;
+            const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
+            const a = hash2D(ix, iy), b = hash2D(ix + 1, iy);
+            const c = hash2D(ix, iy + 1), d = hash2D(ix + 1, iy + 1);
+            return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+        }
+        function fbmNoise(x, y, octaves = 6) {
+            let value = 0, amplitude = 0.5, freq = 1;
+            for (let i = 0; i < octaves; i++) {
+                value += amplitude * smoothNoise(x * freq, y * freq);
+                freq *= 2.03;
+                amplitude *= 0.48;
+            }
+            return value;
+        }
+
+        // === PLANET TEXTURE GENERATOR (continents + ocean + ice caps) ===
+        function createPlanetTexture(baseColor, oceanColor, iceColor, size = 1024) {
+            const c = document.createElement('canvas');
+            c.width = size; c.height = size / 2;
+            const ctx = c.getContext('2d');
+            const imgData = ctx.createImageData(size, size / 2);
+            for (let py = 0; py < size / 2; py++) {
+                for (let px = 0; px < size; px++) {
+                    const nx = px / size * 8;
+                    const ny = py / (size / 2) * 4;
+                    const n = fbmNoise(nx, ny, 7);
+                    const lat = Math.abs(py / (size / 2) - 0.5) * 2;
+                    let r, g, b;
+                    if (lat > 0.85) {
+                        // Ice caps
+                        r = ice_color_r; g = ice_color_g; b = ice_color_b;
+                    } else if (n < 0.42) {
+                        // Ocean (depth variation)
+                        const depth = 1 - (n / 0.42);
+                        r = ocean_color_r * (0.5 + depth * 0.5);
+                        g = ocean_color_g * (0.5 + depth * 0.5);
+                        b = ocean_color_b * (0.6 + depth * 0.4);
+                    } else if (n < 0.55) {
+                        // Coast/beach
+                        const t = (n - 0.42) / 0.13;
+                        r = ocean_color_r + (base_color_r * 0.7 - ocean_color_r) * t;
+                        g = ocean_color_g + (base_color_g * 0.8 - ocean_color_g) * t;
+                        b = ocean_color_b + (base_color_b * 0.6 - ocean_color_b) * t;
+                    } else if (n < 0.7) {
+                        // Land
+                        const elev = (n - 0.55) / 0.15;
+                        r = base_color_r * (0.7 + elev * 0.3);
+                        g = base_color_g * (0.7 + elev * 0.3);
+                        b = base_color_b * (0.7 + elev * 0.3);
+                    } else {
+                        // Mountains/snow
+                        const snow = (n - 0.7) / 0.3;
+                        r = base_color_r + (255 - base_color_r) * snow * 0.6;
+                        g = base_color_g + (255 - base_color_g) * snow * 0.6;
+                        b = base_color_b + (255 - base_color_b) * snow * 0.6;
+                    }
+                    const idx = (py * size + px) * 4;
+                    imgData.data[idx] = Math.min(255, r);
+                    imgData.data[idx + 1] = Math.min(255, g);
+                    imgData.data[idx + 2] = Math.min(255, b);
+                    imgData.data[idx + 3] = 255;
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+            return new THREE.CanvasTexture(c);
+        }
+
+        // Helper to parse color for texture generation
+        function hexToRGB(hex) { return { r: (hex >> 16) & 255, g: (hex >> 8) & 255, b: hex & 255 }; }
+        let ocean_color_r, ocean_color_g, ocean_color_b, base_color_r, base_color_g, base_color_b, ice_color_r, ice_color_g, ice_color_b;
+
+        function setPlanetColors(baseHex, oceanHex, iceHex) {
+            const base = hexToRGB(baseHex), ocean = hexToRGB(oceanHex), ice = hexToRGB(iceHex);
+            base_color_r = base.r; base_color_g = base.g; base_color_b = base.b;
+            ocean_color_r = ocean.r; ocean_color_g = ocean.g; ocean_color_b = ocean.b;
+            ice_color_r = ice.r; ice_color_g = ice.g; ice_color_b = ice.b;
+        }
+
+        // === RADIAL GLOW TEXTURE ===
+        function createRadialTexture(color1, color2, size = 256) {
+            const c = document.createElement('canvas');
+            c.width = c.height = size;
+            const ctx = c.getContext('2d');
+            const g = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+            g.addColorStop(0, color1);
+            g.addColorStop(0.3, color2);
+            g.addColorStop(1, 'transparent');
+            ctx.fillStyle = g;
+            ctx.fillRect(0, 0, size, size);
+            return new THREE.CanvasTexture(c);
+        }
+
+        // === ATMOSPHERE SCATTERING SHADER (realistic Rayleigh-like) ===
+        const atmoVertexShader = `
+            varying vec3 vNormal;
+            varying vec3 vWorldPos;
+            void main() {
+                vNormal = normalize(normalMatrix * normal);
+                vWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+        `;
+        const atmoFragmentShader = `
+            uniform vec3 glowColor;
+            uniform vec3 lightDir;
+            uniform float thickness;
+            varying vec3 vNormal;
+            varying vec3 vWorldPos;
+            void main() {
+                vec3 viewDir = normalize(cameraPosition - vWorldPos);
+                float fresnel = pow(1.0 - max(dot(vNormal, viewDir), 0.0), 3.0);
+                float lightSide = max(dot(vNormal, normalize(lightDir)), 0.0);
+                // Rayleigh scattering: more blue at edge, warm at light side
+                vec3 scatter = glowColor * (0.3 + fresnel * 0.7);
+                scatter += vec3(0.2, 0.1, 0.0) * lightSide * fresnel * 0.4;
+                float alpha = fresnel * thickness * (0.5 + lightSide * 0.5);
+                gl_FragColor = vec4(scatter, alpha);
+            }
+        `;
+
+        // === PLANET SHADER (procedural texture + lighting + specular) ===
+        const planetVShader = `
+            varying vec2 vUv;
+            varying vec3 vNormal;
+            varying vec3 vWorldPos;
+            void main() {
+                vUv = uv;
+                vNormal = normalize(normalMatrix * normal);
+                vWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+        `;
+        const planetFShader = `
+            uniform sampler2D planetTex;
+            uniform vec3 lightDir;
+            uniform float time;
+            varying vec2 vUv;
+            varying vec3 vNormal;
+            varying vec3 vWorldPos;
+            void main() {
+                vec3 baseColor = texture2D(planetTex, vUv).rgb;
+                vec3 N = normalize(vNormal);
+                vec3 L = normalize(lightDir);
+                vec3 V = normalize(cameraPosition - vWorldPos);
+                vec3 H = normalize(L + V);
+                // Diffuse
+                float diff = max(dot(N, L), 0.0);
+                float terminator = smoothstep(-0.1, 0.2, diff);
+                // Night side: subtle city lights
+                float nightIntensity = smoothstep(0.1, -0.1, diff) * 0.3;
+                vec3 nightColor = vec3(0.8, 0.6, 0.2) * nightIntensity;
+                // Specular (water reflection)
+                float spec = pow(max(dot(N, H), 0.0), 64.0) * diff;
+                // Final
+                vec3 dayColor = baseColor * (0.15 + diff * 0.85);
+                vec3 color = mix(baseColor * 0.05, dayColor, terminator);
+                color += nightColor * (baseColor.b > baseColor.r ? 0.5 : 0.2);
+                color += vec3(1.0, 0.95, 0.8) * spec * 0.4;
+                // Rim light
+                float rim = pow(1.0 - max(dot(N, V), 0.0), 4.0);
+                color += vec3(0.3, 0.4, 0.8) * rim * 0.15;
+                gl_FragColor = vec4(color, 1.0);
+            }
+        `;
+
+        // === PLANET 1 — "Oscco" world (blue-green earth-like) ===
+        setPlanetColors(0x2d6a4f, 0x0a2463, 0xe8eef2);
+        const planet1Tex = createPlanetTexture(0x2d6a4f, 0x0a2463, 0xe8eef2, 1024);
+        const planet1 = new THREE.Mesh(
+            new THREE.SphereGeometry(3, 128, 128),
+            new THREE.ShaderMaterial({
+                vertexShader: planetVShader,
+                fragmentShader: planetFShader,
+                uniforms: {
+                    planetTex: { value: planet1Tex },
+                    lightDir: { value: new THREE.Vector3(1, 0.3, 0.5).normalize() },
+                    time: { value: 0 },
+                },
+            })
+        );
+        planet1.position.set(-12, 3, -22);
+        scene.add(planet1);
+
+        // Atmosphere (3 layers for depth)
+        const atmoLayers1 = [];
+        for (let i = 0; i < 3; i++) {
+            const r = 3.3 + i * 0.35;
+            const mat = new THREE.ShaderMaterial({
+                vertexShader: atmoVertexShader,
+                fragmentShader: atmoFragmentShader,
+                uniforms: {
+                    glowColor: { value: new THREE.Color(i === 0 ? 0x4488dd : i === 1 ? 0x2266aa : 0x114488) },
+                    lightDir: { value: new THREE.Vector3(1, 0.3, 0.5).normalize() },
+                    thickness: { value: 0.8 - i * 0.2 },
+                },
+                transparent: true, side: THREE.BackSide,
+                blending: THREE.AdditiveBlending, depthWrite: false,
+            });
+            const mesh = new THREE.Mesh(new THREE.SphereGeometry(r, 64, 64), mat);
+            mesh.position.copy(planet1.position);
+            scene.add(mesh);
+            atmoLayers1.push(mesh);
+        }
+
+        // === PLANET 2 — ringed planet (Saturn-like) ===
+        setPlanetColors(0xc4a46c, 0x8b6914, 0xf0e6d3);
+        const planet2Tex = createPlanetTexture(0xc4a46c, 0x8b6914, 0xf0e6d3, 1024);
+        const planet2 = new THREE.Mesh(
+            new THREE.SphereGeometry(1.8, 128, 128),
+            new THREE.ShaderMaterial({
+                vertexShader: planetVShader,
+                fragmentShader: planetFShader,
+                uniforms: {
+                    planetTex: { value: planet2Tex },
+                    lightDir: { value: new THREE.Vector3(-0.5, 0.2, 0.8).normalize() },
+                    time: { value: 0 },
+                },
+            })
+        );
+        planet2.rotation.z = 0.3;
+        planet2.position.set(16, -4, -28);
+        scene.add(planet2);
+
+        // Ring geometry
+        const ringGeo = new THREE.RingGeometry(2.5, 4.5, 128);
+        // Modify UVs for ring texture stretch
+        const ringUv = ringGeo.attributes.uv;
+        for (let i = 0; i < ringUv.count; i++) {
+            const x = ringUv.getX(i), y = ringUv.getY(i);
+            ringUv.setXY(i, (x - 0.5) * 2, (y - 0.5) * 2);
+        }
+        // Ring texture (bands)
+        const ringCanvas = document.createElement('canvas');
+        ringCanvas.width = 512; ringCanvas.height = 32;
+        const ringCtx = ringCanvas.getContext('2d');
+        const ringGrad = ringCtx.createLinearGradient(0, 0, 512, 0);
+        ringGrad.addColorStop(0, 'rgba(180,150,100,0.15)');
+        ringGrad.addColorStop(0.15, 'rgba(200,170,120,0.6)');
+        ringGrad.addColorStop(0.3, 'rgba(160,130,80,0.1)');
+        ringGrad.addColorStop(0.45, 'rgba(210,180,130,0.7)');
+        ringGrad.addColorStop(0.6, 'rgba(170,140,90,0.15)');
+        ringGrad.addColorStop(0.75, 'rgba(195,165,115,0.55)');
+        ringGrad.addColorStop(0.9, 'rgba(150,120,70,0.1)');
+        ringGrad.addColorStop(1, 'rgba(180,150,100,0.2)');
+        ringCtx.fillStyle = ringGrad;
+        ringCtx.fillRect(0, 0, 512, 32);
+        const ringTex = new THREE.CanvasTexture(ringCanvas);
+
+        const ringMat = new THREE.MeshBasicMaterial({
+            map: ringTex, transparent: true, side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending, depthWrite: false,
+        });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = Math.PI * 0.45;
+        ring.rotation.y = 0.2;
+        ring.position.copy(planet2.position);
+        scene.add(ring);
+
+        // Atmosphere for planet2
+        const atmoLayers2 = [];
+        for (let i = 0; i < 2; i++) {
+            const r = 2.1 + i * 0.4;
+            const mat = new THREE.ShaderMaterial({
+                vertexShader: atmoVertexShader,
+                fragmentShader: atmoFragmentShader,
+                uniforms: {
+                    glowColor: { value: new THREE.Color(i === 0 ? 0xddaa66 : 0x885533) },
+                    lightDir: { value: new THREE.Vector3(-0.5, 0.2, 0.8).normalize() },
+                    thickness: { value: 0.7 - i * 0.25 },
+                },
+                transparent: true, side: THREE.BackSide,
+                blending: THREE.AdditiveBlending, depthWrite: false,
+            });
+            const mesh = new THREE.Mesh(new THREE.SphereGeometry(r, 64, 64), mat);
+            mesh.position.copy(planet2.position);
+            scene.add(mesh);
+            atmoLayers2.push(mesh);
+        }
+
+        // === STARFIELD con brillo aditivo ===
+        const starCount = 3000;
+        const starGeo = new THREE.BufferGeometry();
+        const starPos = new Float32Array(starCount * 3);
+        const starCol = new Float32Array(starCount * 3);
+        const starSizes = new Float32Array(starCount);
+        for (let i = 0; i < starCount; i++) {
+            starPos[i*3] = (Math.random()-0.5)*120;
+            starPos[i*3+1] = (Math.random()-0.5)*120;
+            starPos[i*3+2] = (Math.random()-0.5)*120;
+            const cv = Math.random();
+            if (cv < 0.12) { starCol[i*3]=0.6; starCol[i*3+1]=0.75; starCol[i*3+2]=1.0; }
+            else if (cv < 0.28) { starCol[i*3]=1.0; starCol[i*3+1]=0.95; starCol[i*3+2]=0.8; }
+            else if (cv < 0.38) { starCol[i*3]=1.0; starCol[i*3+1]=0.75; starCol[i*3+2]=0.5; }
+            else if (cv < 0.44) { starCol[i*3]=1.0; starCol[i*3+1]=0.5; starCol[i*3+2]=0.4; }
+            else { starCol[i*3]=1.0; starCol[i*3+1]=1.0; starCol[i*3+2]=1.0; }
+            starSizes[i] = Math.random() * 0.15 + 0.03;
+        }
+        starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+        starGeo.setAttribute('color', new THREE.BufferAttribute(starCol, 3));
+
+        const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({
+            size: 0.12, vertexColors: true, transparent: true, opacity: 0.9,
+            sizeAttenuation: true, map: createRadialTexture('rgba(220,230,255,1)', 'rgba(150,170,255,0.2)', 128),
+            blending: THREE.AdditiveBlending, depthWrite: false,
+        }));
+        scene.add(stars);
+
+        // === BRIGHT STAR SPRITES (twinkling + cross flare) ===
+        const brightStars = [];
+        for (let i = 0; i < 25; i++) {
+            const color = new THREE.Color().setHSL(Math.random()*0.15+0.55, 0.4, 0.7+Math.random()*0.3);
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+                map: createRadialTexture(
+                    `rgba(${color.r*255|0},${color.g*255|0},${color.b*255|0},1)`,
+                    `rgba(${color.r*255|0},${color.g*255|0},${color.b*255|0},0.15)`, 256),
+                transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+            }));
+            const s = Math.random() * 2.5 + 0.8;
+            sprite.position.set((Math.random()-0.5)*80, (Math.random()-0.5)*80, (Math.random()-0.5)*60-10);
+            sprite.scale.set(s*2, s*2, 1);
+            scene.add(sprite);
+            brightStars.push({ sprite, baseSize: s, phase: Math.random()*Math.PI*2 });
+        }
+
+        // === SHOOTING STARS ===
+        const shootingStars = [];
+        function createShootingStar() {
+            const start = new THREE.Vector3(
+                (Math.random()-0.5)*100,
+                20 + Math.random()*30,
+                (Math.random()-0.5)*60-20
+            );
+            const dir = new THREE.Vector3(
+                (Math.random()-0.5)*0.3,
+                -1,
+                (Math.random()-0.5)*0.2
+            ).normalize();
+            const trailCount = 20;
+            const positions = new Float32Array(trailCount * 3);
+            for (let i = 0; i < trailCount; i++) {
+                positions[i*3] = start.x + dir.x * i * 0.5;
+                positions[i*3+1] = start.y + dir.y * i * 0.5;
+                positions[i*3+2] = start.z + dir.z * i * 0.5;
+            }
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const mat = new THREE.PointsMaterial({
+                color: new THREE.Color(1.0, 0.95, 0.8),
+                size: 0.3, transparent: true, opacity: 0.8,
+                blending: THREE.AdditiveBlending, depthWrite: false,
+            });
+            const points = new THREE.Points(geo, mat);
+            scene.add(points);
+            shootingStars.push({ points, dir, life: 0, maxLife: 1.5 + Math.random()*1, start });
+        }
+
+        // Spawn shooting stars periodically
+        setInterval(() => {
+            if (shootingStars.length < 3 && Math.random() > 0.3) createShootingStar();
+        }, 3000);
+
+        // === SCATTERED UNIVERSE STARS (galaxia dispersa → estrellas) ===
+        const extraStarCount = 8000;
+        const extraGeo = new THREE.BufferGeometry();
+        const extraPos = new Float32Array(extraStarCount * 3);
+        const extraCol = new Float32Array(extraStarCount * 3);
+        for (let i = 0; i < extraStarCount; i++) {
+            // Distribución esférica uniforme
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            const radius = 50 + Math.random() * 80;
+            extraPos[i*3] = radius * Math.sin(phi) * Math.cos(theta);
+            extraPos[i*3+1] = radius * Math.sin(phi) * Math.sin(theta);
+            extraPos[i*3+2] = radius * Math.cos(phi) - 30;
+            // Colores estelares variados
+            const cv = Math.random();
+            let cr, cg, cb;
+            if (cv < 0.15) { cr = 0.6; cg = 0.75; cb = 1.0; }
+            else if (cv < 0.30) { cr = 1.0; cg = 0.95; cb = 0.8; }
+            else if (cv < 0.40) { cr = 1.0; cg = 0.7; cb = 0.45; }
+            else if (cv < 0.47) { cr = 1.0; cg = 0.5; cb = 0.4; }
+            else { cr = 1.0; cg = 1.0; cb = 1.0; }
+            extraCol[i*3] = cr; extraCol[i*3+1] = cg; extraCol[i*3+2] = cb;
+        }
+        extraGeo.setAttribute('position', new THREE.BufferAttribute(extraPos, 3));
+        extraGeo.setAttribute('color', new THREE.BufferAttribute(extraCol, 3));
+        const extraStars = new THREE.Points(extraGeo, new THREE.PointsMaterial({
+            size: 0.06, vertexColors: true, transparent: true, opacity: 0.65,
+            sizeAttenuation: true, blending: THREE.AdditiveBlending, depthWrite: false,
+        }));
+        scene.add(extraStars);
+
+        // === NEBULA (volumetric fBM shader) ===
+        const nebulaUniforms = {
+            uTime: { value: 0 },
+            uColor1: { value: new THREE.Color(0x1a0040) },
+            uColor2: { value: new THREE.Color(0x000033) },
+            uColor3: { value: new THREE.Color(0x400020) },
+        };
+        const nebulaMat = new THREE.ShaderMaterial({
+            uniforms: nebulaUniforms,
+            vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+            fragmentShader: `
+                uniform float uTime;
+                uniform vec3 uColor1; uniform vec3 uColor2; uniform vec3 uColor3;
+                varying vec2 vUv;
+                float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+                float noise(vec2 p){ vec2 i=floor(p),f=fract(p); float a=hash(i),b=hash(i+vec2(1,0)),c=hash(i+vec2(0,1)),d=hash(i+vec2(1,1)); vec2 u=f*f*(3.0-2.0*f); return mix(a,b,u.x)+(c-a)*u.y*(1.0-u.x)+(d-b)*u.x*u.y; }
+                float fbm(vec2 p){ float v=0.0,a=0.5; for(int i=0;i<6;i++){v+=a*noise(p);p*=2.03;a*=0.48;} return v; }
+                void main(){
+                    vec2 uv=vUv;
+                    float n1=fbm(uv*2.5+uTime*0.04);
+                    float n2=fbm(uv*6.0-uTime*0.025)*0.35;
+                    float n3=fbm(uv*12.0+uTime*0.06)*0.15;
+                    float n=n1+n2+n3;
+                    vec3 color=mix(uColor1,uColor2,n);
+                    color=mix(color,uColor3,fbm(uv*4.0+uTime*0.03)*0.5);
+                    float dist=length(uv-0.5);
+                    float alpha=n*0.12*(1.0-dist*1.8);
+                    gl_FragColor=vec4(color,max(alpha,0.0));
+                }`,
+            transparent: true, side: THREE.DoubleSide, depthWrite: false,
+        });
+        const nebulaMesh = new THREE.Mesh(new THREE.PlaneGeometry(90,90), nebulaMat);
+        nebulaMesh.position.set(0,0,-55);
+        scene.add(nebulaMesh);
+
+        // === COMET with glowing tail ===
+        const cometUniforms = { uTime: { value: 0 } };
+        const cometTailCanvas = document.createElement('canvas');
+        cometTailCanvas.width = 256; cometTailCanvas.height = 64;
+        const cometCtx = cometTailCanvas.getContext('2d');
+        const cometGrad = cometCtx.createRadialGradient(128, 32, 0, 128, 32, 128);
+        cometGrad.addColorStop(0, 'rgba(180,220,255,0.9)');
+        cometGrad.addColorStop(0.3, 'rgba(100,150,255,0.4)');
+        cometGrad.addColorStop(1, 'rgba(50,80,200,0)');
+        cometCtx.fillStyle = cometGrad;
+        cometCtx.fillRect(0, 0, 256, 64);
+        const cometTailTex = new THREE.CanvasTexture(cometTailCanvas);
+        const cometTail = new THREE.Sprite(new THREE.SpriteMaterial({
+            map: cometTailTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+        }));
+        cometTail.scale.set(4, 1.5, 1);
+        const cometHead = new THREE.Mesh(
+            new THREE.SphereGeometry(0.15, 16, 16),
+            new THREE.MeshBasicMaterial({ color: 0xaaddff })
+        );
+        const cometGroup = new THREE.Group();
+        cometGroup.add(cometHead);
+        cometGroup.add(cometTail);
+        cometGroup.position.set(30, 15, -10);
+        scene.add(cometGroup);
+
+        // === MOUSE PARALLAX ===
+        let mouseX=0, mouseY=0;
+        document.addEventListener('mousemove', e => {
+            mouseX = (e.clientX/window.innerWidth-0.5)*2;
+            mouseY = (e.clientY/window.innerHeight-0.5)*2;
+        });
+
+        // === CAMERA ORBIT ===
+        let orbitAngle = 0;
+        const orbitRadius = 28;
+        const orbitSpeed = 0.3;
+        let mouseInfluenceX = 0, mouseInfluenceY = 0;
+
+        document.addEventListener('mousemove', e => {
+            mouseInfluenceX = (e.clientX / window.innerWidth - 0.5) * 2;
+            mouseInfluenceY = (e.clientY / window.innerHeight - 0.5) * 2;
+        });
+
+        // === ANIMATE ===
+        let time = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = 0.016;
+            time += dt;
+
+            // Órbita continua
+            orbitAngle += orbitSpeed * dt;
+
+            stars.rotation.y += 0.0002;
+            extraStars.rotation.y += 0.0001;
+
+            planet1.rotation.y += 0.003;
+            planet2.rotation.y += 0.005;
+
+            planet1.material.uniforms.time.value = time;
+            planet2.material.uniforms.time.value = time;
+
+            planet1.position.y = 3 + Math.sin(time*0.4)*0.4;
+            planet1.position.x = -12 + Math.sin(time*0.2)*0.3;
+            atmoLayers1.forEach(m => m.position.copy(planet1.position));
+            planet2.position.y = -4 + Math.sin(time*0.3+1)*0.4;
+            atmoLayers2.forEach(m => m.position.copy(planet2.position));
+            ring.position.copy(planet2.position);
+            ring.rotation.y += 0.001;
+
+            brightStars.forEach(s => {
+                const sc = s.baseSize*2 + Math.sin(time*3+s.phase)*0.8;
+                s.sprite.scale.set(sc, sc, 1);
+                s.sprite.material.opacity = 0.4 + Math.sin(time*2+s.phase)*0.4;
+            });
+
+            // Shooting stars update
+            for (let i = shootingStars.length - 1; i >= 0; i--) {
+                const ss = shootingStars[i];
+                ss.life += dt;
+                if (ss.life > ss.maxLife) {
+                    scene.remove(ss.points);
+                    ss.points.geometry.dispose();
+                    shootingStars.splice(i, 1);
+                    continue;
+                }
+                const fade = 1 - ss.life / ss.maxLife;
+                ss.points.material.opacity = 0.8 * fade;
+                ss.points.position.x += ss.dir.x * dt * 30;
+                ss.points.position.y += ss.dir.y * dt * 30;
+                ss.points.position.z += ss.dir.z * dt * 30;
+            }
+
+            // Comet animation (elliptical orbit)
+            const cometAngle = time * 0.15;
+            const cometRx = 35, cometRy = 18;
+            cometGroup.position.x = Math.cos(cometAngle) * cometRx;
+            cometGroup.position.y = Math.sin(cometAngle) * cometRy + 5;
+            cometGroup.position.z = -10 + Math.sin(cometAngle * 0.7) * 8;
+            // Tail faces opposite to motion
+            const tailAngle = Math.atan2(-cometGroup.position.y, -cometGroup.position.x);
+            cometTail.material.rotation = tailAngle;
+
+            nebulaUniforms.uTime.value = time;
+
+            // === CÁMARA ORBITAL ===
+            const camY = Math.sin(time * 0.2) * 5;
+            const camX = Math.sin(orbitAngle) * orbitRadius + mouseInfluenceX * 4;
+            const camZ = Math.cos(orbitAngle) * orbitRadius;
+            const camTargetY = camY - mouseInfluenceY * 3;
+
+            // Lerp suave
+            camera.position.x += (camX - camera.position.x) * 0.03;
+            camera.position.y += (camTargetY - camera.position.y) * 0.03;
+            camera.position.z += (camZ - camera.position.z) * 0.03;
+            camera.lookAt(-1, 0, -15);
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // === RESIZE ===
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth/window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // === SCROLL REVEAL ===
+        const revealElements = document.querySelectorAll('.reveal');
+        const observer = new IntersectionObserver(entries => {
+            entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+        }, { threshold: 0.1, rootMargin: '0px 0px -30px 0px' });
+        revealElements.forEach(el => observer.observe(el));
+
+        // === SKILL BARS ===
+        const skillBars = document.querySelectorAll('.skill-fill');
+        const skillObserver = new IntersectionObserver(entries => {
+            entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('animate'); });
+        }, { threshold: 0.5 });
+        skillBars.forEach(bar => skillObserver.observe(bar));
+    </script>
+</body>
+</html>

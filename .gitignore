@@ -1,0 +1,13 @@
+# Respaldos y comprimidos (no van a la web)
+*.zip
+*.7z
+*.rar
+
+# Sistema
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
